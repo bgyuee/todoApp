@@ -1,0 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap');
+/* font-family: 'Nanum Gothic', sans-serif; */
+
+body{
+    font-family: 'Nanum Gothic', sans-serif;
+}
+.writeContainer{
+    margin-top: 100px;
+}

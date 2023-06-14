@@ -4,7 +4,12 @@ const port = 8080;
 app.use(express.urlencoded({ extended: true }));
 const MongoClient = require('mongodb').MongoClient;
 const uri = "mongodb+srv://bgyuee:as970930@cluster0.usbyjbv.mongodb.net/?retryWrites=true&w=majority";
+const methodOverride = require('method-override');
+app.use(methodOverride('_method'));
+
 app.set('view engine', 'ejs');
+app.use('/public', express.static('public')); //미들웨어 static 파일을 보관하기 위해 public 폴더를 쓸거다
+
 
 let db;
 MongoClient.connect(uri, { useUnifiedTopology: true }, function (에러, client) {
@@ -37,15 +42,15 @@ app.get('/beauty', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
+    res.render('index.ejs');
 });
 
 app.get('/write', (req, res) => {
-    res.sendFile(__dirname + '/write.html');
+    res.render('write.ejs');
 });
 
 app.post('/add', (req, res) => {
-    res.send('전송완료');
+    // res.send('전송완료');
     db.collection('counter').findOne({name : '게시물갯수'}, function(error, reuslt){
         console.log(reuslt.totalPost);
         let 총게시물갯수 = reuslt.totalPost;
@@ -53,9 +58,13 @@ app.post('/add', (req, res) => {
     db.collection('post').insertOne({ _id: 총게시물갯수 + 1, 제목 : req.body.title, 날짜 : req.body.date }, function (error, reuslt) {
         console.log('저장완료');
     // $set(변경), $inc(증가), $min(기존값보다 적을 때만 변경), $rename(key값 이름변경)
-    db.collection('counter').updateOne({name : '게시물갯수'}, { $inc : {totalPost: 1} }, function(error, result){
+    db.collection('counter').updateOne(
+        {name : '게시물갯수'}, 
+        { $inc : {totalPost: 1} }, 
+        function(error, result){
         if(error) return console.log(error);
-    })
+        res.redirect('list');
+    });
     });
 
 
@@ -83,5 +92,22 @@ app.get('/detail/:id', (req, res) => {
     db.collection('post').findOne({_id : parseInt(req.params.id)}, function(error, result){
         console.log(result);
         res.render('detail.ejs', { data : result });
+    });
+});
+
+app.get('/edit/:id', function(req, res){
+    db.collection('post').findOne({_id : parseInt(req.params.id)}, function(error, result){
+        console.log(result);
+        res.render('edit.ejs', { data : result });
+    });
+});
+
+app.put('/edit', function(req, res){
+    db.collection('post').updateOne(
+    { _id : parseInt(req.body.id) }, 
+    { $set : { 제목 : req.body.title, 날짜 : req.body.date } }, 
+    function(error, result){
+        console.log('수정완료');
+        res.redirect('/list');
     });
 });
