@@ -111,3 +111,55 @@ app.put('/edit', function(req, res){
         res.redirect('/list');
     });
 });
+
+/* 회원가입, 로그인 */
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const session = require('express-session');
+
+//미들웨어
+app.use(session({secret : '비밀코드', resave : true, saveUninitialized : false})); 
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.get('/login', function(req, res){
+    res.render('login.ejs');
+});
+
+app.post('/login', passport.authenticate('local', {
+failureRedirect : '/fail'
+}), function(req, res){
+    res.redirect('/') //인증된 계정을 지정한 주소로 보내줌
+});
+
+app.get('/mypage', 로그인했니, function(req, res){
+    res.render('mypage.ejs');
+});
+
+function 로그인했니(req, res, next){
+    if (req.user) {
+        next();
+    } else {
+        res.send('로그인 해주세욥');
+    }
+};
+
+// Localstrategy
+passport.use(new LocalStrategy({
+    usernameField: 'id', //form에 name값
+    passwordField: 'pw', //form에 name값
+    session: true, //로그인 후 session을 저장할건지
+    passReqToCallback: false,
+  }, function (입력한아이디, 입력한비번, done) {
+    //console.log(입력한아이디, 입력한비번);
+    db.collection('login').findOne({ id: 입력한아이디 }, function (에러, 결과) {
+      if (에러) return done(에러)
+  
+      if (!결과) return done(null, false, { message: '존재하지않는 아이디요' })
+      if (입력한비번 == 결과.pw) {
+        return done(null, 결과)
+      } else {
+        return done(null, false, { message: '비번틀렸어요' })
+      }
+    })
+  }));
