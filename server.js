@@ -1,9 +1,10 @@
+require('dotenv').config(); //환경변수 사용
 const express = require('express');
 const app = express();
-const port = 8080;
+const port = process.env.PORT;
 app.use(express.urlencoded({ extended: true }));
 const MongoClient = require('mongodb').MongoClient;
-const uri = "mongodb+srv://bgyuee:as970930@cluster0.usbyjbv.mongodb.net/?retryWrites=true&w=majority";
+const uri = process.env.DB_URL;
 const methodOverride = require('method-override');
 app.use(methodOverride('_method'));
 
@@ -138,7 +139,7 @@ app.get('/mypage', 로그인했니, function(req, res){
 
 function 로그인했니(req, res, next){
     if (req.user) {
-        next();
+        next()
     } else {
         res.send('로그인 해주세욥');
     }
@@ -163,3 +164,12 @@ passport.use(new LocalStrategy({
       }
     })
   }));
+
+// 로그인한 정보 세션유지
+  passport.serializeUser(function (user, done) { //세션을 저장시키는 코드 (로그인 성공시 발동)
+    done(null, user.id)
+  });
+  
+  passport.deserializeUser(function (아이디, done) { // 나중에 호출되는애 (마이페이지 접속시 발동)
+    done(null, {})
+  }); 
