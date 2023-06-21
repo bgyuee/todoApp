@@ -13,14 +13,14 @@
   </head>
   <body>
     <%- include('nav.html')%>
-    <h3 class="ml-2 my-3 text-center">서버에서 가져온 할일 리스트</h3>
+    <h3 class="ml-2 my-3 text-center">검색결과</h3>
     <div class="container input-group mb-2">
       <input class="form-control" id="searchInput">
       <button class="input-group-append btn btn-danger" id="search">검색</button>
     </div>
     <div class="container">
       <ul class="list-group">
-        <% posts.map((item) => { %>
+        <% searchResult.map((item) => { %>
         <li class="list-group-item">
           <p>글번호 : <%= item._id %></p>
           <h4>할일 제목 : <%= item.제목 %></h4>
@@ -30,8 +30,8 @@
         </li>
         <% });%>
       </ul>
+      <button type="button" class="btn btn-info mt-4" onclick= "location.href='/list'">전체목록</button>
     </div>
-      
 
       <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js"></script>
 

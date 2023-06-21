@@ -172,4 +172,13 @@ passport.use(new LocalStrategy({
   
   passport.deserializeUser(function (아이디, done) { // 나중에 호출되는애 (마이페이지 접속시 발동)
     done(null, {})
-  }); 
+  });
+
+  /* 검색기능 */
+  app.get('/search', (req, res) => {
+    console.log(req.query.value); //사용자가 입력한 검색어
+    db.collection('post').find({제목 : req.query.value}).toArray((error, result) => {// toArray : 찾은 데이터들을 배열로 변환시켜줌
+        console.log(result);
+        res.render('searchResult.ejs', { searchResult :  result});
+    }); 
+  });
