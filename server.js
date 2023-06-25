@@ -50,42 +50,12 @@ app.get('/write', (req, res) => {
     res.render('write.ejs');
 });
 
-app.post('/add', (req, res) => {
-    // res.send('전송완료');
-    db.collection('counter').findOne({name : '게시물갯수'}, function(error, reuslt){
-        console.log(reuslt.totalPost);
-        let 총게시물갯수 = reuslt.totalPost;
 
-    db.collection('post').insertOne({ _id: 총게시물갯수 + 1, 제목 : req.body.title, 날짜 : req.body.date }, function (error, reuslt) {
-        console.log('저장완료');
-    // $set(변경), $inc(증가), $min(기존값보다 적을 때만 변경), $rename(key값 이름변경)
-    db.collection('counter').updateOne(
-        {name : '게시물갯수'}, 
-        { $inc : {totalPost: 1} }, 
-        function(error, result){
-        if(error) return console.log(error);
-        res.redirect('list');
-    });
-    });
-
-
-    });
-    
-});
 
 app.get('/list', (req, res) => {
     db.collection('post').find().toArray(function(error, reuslt){
         console.log(reuslt);
         res.render('list.ejs', { posts : reuslt });
-    });
-});
-
-app.delete('/delete', function(req, res){
-    console.log(req.body);
-    req.body._id = parseInt(req.body._id); // 문자데이터를 정수로 parseInt함수를 써서 바꿔줌
-    db.collection('post').deleteOne(req.body, function(error, result){
-        console.log('삭제완료');
-        res.status(200).send({ message : '성공했습니다' }); //응답코드 200을 보내주세요 & 메세지도 보내주세여  200 : 성공, 400 : 실패  이 숫자를 보내줘야 제이쿼리에 ajax의 done(200), fail(400)이 실행된다
     });
 });
 
@@ -143,7 +113,7 @@ function 로그인했니(req, res, next){
     } else {
         res.send('로그인 해주세욥');
     }
-};
+}; //미들웨어역활 사용자가 로그인했는지 안했는지 검사하는 함수
 
 // Localstrategy
 passport.use(new LocalStrategy({
@@ -171,14 +141,90 @@ passport.use(new LocalStrategy({
   });
   
   passport.deserializeUser(function (아이디, done) { // 나중에 호출되는애 (마이페이지 접속시 발동)
-    done(null, {})
+    db.collection('login').findOne({ id : 아이디 }, (error, result) => {
+      done(null, result);
+    });
   });
+
+  /* 회원가입 */
+  app.post('/register', (req, res) => {
+    db.collection('login').insertOne({ id : req.body.id, pw : req.body.pw }, (error, result) => {
+      res.redirect('/');
+    });
+  });
+
+  /* 글작성 */
+  app.post('/add', (req, res) => {
+
+    // res.send('전송완료');
+    db.collection('counter').findOne({name : '게시물갯수'}, function(error, reuslt){
+        console.log(reuslt.totalPost);
+        let 총게시물갯수 = reuslt.totalPost;
+
+        let userContent = { 작성자 : req.user._id, _id: 총게시물갯수 + 1, 제목 : req.body.title, 날짜 : req.body.date }
+
+    db.collection('post').insertOne(userContent, function (error, reuslt) {
+        console.log('저장완료');
+    // $set(변경), $inc(증가), $min(기존값보다 적을 때만 변경), $rename(key값 이름변경)
+    db.collection('counter').updateOne(
+        {name : '게시물갯수'}, 
+        { $inc : {totalPost: 1} }, 
+        function(error, result){
+        if(error) return console.log(error);
+        res.redirect('list');
+    });
+    });
+    });
+    
+});
+
+  /* 삭제요청 */
+  app.delete('/delete', function(req, res){
+    console.log(req.body);
+    req.body._id = parseInt(req.body._id); // 문자데이터를 정수로 parseInt함수를 써서 바꿔줌
+
+    let 삭제할데이터 = { _id : req.body._id, 작성자 : req.user._id }
+
+    // req.body에 담겨온 게시물번호를 가진 글을 db에서 찾아서 삭제해주세요
+    db.collection('post').deleteOne(삭제할데이터, function(error, result){
+        console.log('삭제완료');
+        if (result) {console.log(result);}
+        res.status(200).send({ message : '성공했습니다' }); //응답코드 200을 보내주세요 & 메세지도 보내주세여  200 : 성공, 400 : 실패  이 숫자를 보내줘야 제이쿼리에 ajax의 done(200), fail(400)이 실행된다
+    });
+  });
+
 
   /* 검색기능 */
   app.get('/search', (req, res) => {
+    let 검색조건 = [
+        {
+            $search: {
+              index: 'titleSearch',
+              text: {
+                query: req.query.value,
+                path: ['제목', '날짜']  // 제목날짜 둘다 찾고 싶으면 ['제목', '날짜']
+              }
+            }
+          },
+        //   {
+        //     $sort : { _id : 1 } // 1 : 오름차순 -1, : 내림차순
+        //   },
+        //   {
+        //     $limit : 10 // 글 목록 제한
+        //   },
+          {
+            $project : { 제목 : 1, _id : 1, score : { $meta: "searchScore" } } //1:가져옴 0: 안가져옴 score : 검색관련도 높을수록 관련있음
+          }
+
+    ]
     console.log(req.query.value); //사용자가 입력한 검색어
-    db.collection('post').find({제목 : req.query.value}).toArray((error, result) => {// toArray : 찾은 데이터들을 배열로 변환시켜줌
+    db.collection('post').aggregate(검색조건).toArray((error, result) => {// toArray : 찾은 데이터들을 배열로 변환시켜줌
         console.log(result);
         res.render('searchResult.ejs', { searchResult :  result});
     }); 
   });
+
+
+  /* routes 분할 */
+  app.use('/shop', require('./routes/shop.js')); //shop.js에서 배출한 변수를 첨부 할 수 있다.
+  app.use('/board', require('./routes/board.js')); //board.js에서 배출한 변수를 첨부 할 수 있다.
